@@ -15,16 +15,15 @@ const ArrayItem = styled('div')(props => ({
 const ArrayVisualization = ({ array }) => {
     return <div>
         {array.map((item, index) =>
-            <ArrayItem isFirst={index === 0} key={item}>{item}</ArrayItem>
+            <ArrayItem key={item.index} isFirst={index === 0}>{item.value}</ArrayItem>
         )}
     </div>
 }
 
-async function bubbleSort(length, lessThanOrEqual, swap) {
-    throw new Error('test');
+async function bubbleSort(length, lessThan, swap) {
     for (let i = 0; i < length - 1; ++i) {
         for (let j = 0; j < length - i - 1; ++j) {
-            const isLessThanOrEqual = await lessThanOrEqual(j + 1, j);
+            const isLessThanOrEqual = await lessThan(j + 1, j);
             console.log(length, i, j, isLessThanOrEqual);
             if (!isLessThanOrEqual) {
                 await swap(j, j + 1);
@@ -55,25 +54,53 @@ const ErrorUI = ({ hasError, error }) => {
     return <div><h3>Error Message: {error.message}</h3><WrappedPre>{error.stack}</WrappedPre></div>;
 }
 
-const SortLesson = ({ array, swap, lessThanOrEqual, runAlgorithm, algorithmToUse, toggleAlgorithmToUse, status, error }) => {
+const SortLesson = ({ array, swap, lessThan, runAlgorithm, stopAlgorithm, algorithmToUse, toggleAlgorithmToUse, status, error, shuffle }) => {
     return <div>
         <h4>Status: {status}</h4>
         <ArrayVisualization array={array}/>
         <div>
-            <StartButton onClick={() =>
-                runAlgorithm(array.length, lessThanOrEqual, swap)}
-            >Start</StartButton>
+            { status !== 'running'
+                ? <StartButton onClick={() =>
+                    runAlgorithm(array.length, lessThan, swap)}
+                >Start</StartButton>
+                : <CommonButton onClick={stopAlgorithm}>Stop</CommonButton>
+            }
             <ToggleAlgorithmButton onClick={toggleAlgorithmToUse}>
                 Using {algorithmToUse === 'yuan' ? "yuan's algorithm" : "erqiu's algorithm"}
             </ToggleAlgorithmButton>
+            <CommonButton onClick={shuffle}>
+                Randomize
+            </CommonButton>
             <ErrorUI hasError={status==='error'} error={error}/>
         </div>
     </div>;
 };
 
+function randomArray() {
+    const newArray = [];
+    const length = Math.ceil(Math.random() * 4) + 6;
+    for (let i = 0; i < length; ++i) {
+        newArray.push(Math.ceil(Math.random() * 10));
+    }
+
+    return newArray;
+}
+
+function expandArray(array) {
+    const newArray = [];
+    for (let i = 0; i < array.length; ++i) {
+        newArray.push({
+            value: array[i],
+            index: i,
+        });
+    }
+
+    return newArray;
+}
+
 class SortLessonContainer extends React.Component {
     state = {
-        array: [1, 5, 3, 2, 4],
+        array: expandArray(randomArray()),
         delayMillis: 1000,
         algorithmToUse: 'erqiu',
         caughtError: null,
@@ -86,9 +113,13 @@ class SortLessonContainer extends React.Component {
 
     delay = (fn) => {
         return (...args) => {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 setTimeout(() => {
-                    resolve(fn(...args));
+                    try {
+                        resolve(fn(...args));
+                    } catch (err) {
+                        reject(err);
+                    }
                 }, this.state.delayMillis);
             });
         }
@@ -102,7 +133,17 @@ class SortLessonContainer extends React.Component {
         }
     }
 
+    checkInterrupted = () => {
+        if (this.state.status !== 'running') {
+            const interruptError = new Error('interrupted');
+            interruptError.interrupted = true;
+            throw interruptError;
+        }
+    };
+
     swap = this.delay((i, j) => {
+        this.checkInterrupted();
+
         this.checkIndexRangeOK(i);
         this.checkIndexRangeOK(j);
         console.log(`swapping #${i} and #${j}`)
@@ -119,14 +160,25 @@ class SortLessonContainer extends React.Component {
         });
     });
 
-    lessThanOrEqual = this.delay((i, j) => {
+    lessThan = this.delay((i, j) => {
+        this.checkInterrupted();
+
         this.checkIndexRangeOK(i);
         this.checkIndexRangeOK(j);
-        const result = this.state.array[i] <= this.state.array[j];
-        console.log(`comparing (#${i}, ${this.state.array[i]}) (#${j}, ${this.state.array[j]}) result: ${result}`);
+        const leftValue = this.state.array[i].value;
+        const rightValue = this.state.array[j].value;
+        const result = leftValue < rightValue;
+        console.log(`comparing (#${i}, ${leftValue}) (#${j}, ${rightValue}) result: ${result}`);
 
         return result;
     });
+
+    shuffle = () => {
+        this.setState({
+            array: expandArray(randomArray()),
+            status: 'initial',
+        });
+    };
 
     runAlgorithm = (...args) => {
         const algorithmToUse = this.state.algorithmToUse === 'yuan' ? bubbleSort : erqiuBubbleSort;
@@ -140,23 +192,35 @@ class SortLessonContainer extends React.Component {
                 });
             })
             .catch(err => {
-                this.setState({
-                    caughtError: err,
-                    status: 'error',
-                })
+                if (err.interrupted) {
+                    console.log('stopped');
+                } else {
+                    this.setState({
+                        caughtError: err,
+                        status: 'error',
+                    })
+                }
             });
+    };
+
+    stopAlgorithm = () => {
+        this.setState({
+            status: 'initial',
+        });
     };
 
     render() {
         return <SortLesson
           array={this.state.array}
           swap={this.swap}
-          lessThanOrEqual={this.lessThanOrEqual}
+          lessThan={this.lessThan}
           runAlgorithm={this.runAlgorithm}
           algorithmToUse={this.state.algorithmToUse}
           toggleAlgorithmToUse={this.toggleAlgorithmToUse}
           status={this.state.status}
           error={this.state.caughtError}
+          shuffle={this.shuffle}
+          stopAlgorithm={this.stopAlgorithm}
         />;
     }
 }

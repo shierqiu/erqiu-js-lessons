@@ -1,8 +1,8 @@
-async function bubbleSort(length, isNoGreaterThan, swap) {
+async function bubbleSort(length, isLessThan, swap) {
     // write your code here
 
     // for comparing
-    // const compareResult = await isNoGreaterThan(i, j);
+    // const compareResult = await isLessThan(i, j);
 
     // for swapping items
     // await swap(i, j)
