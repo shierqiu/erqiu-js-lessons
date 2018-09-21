@@ -123,7 +123,7 @@ class SortLessonContainer extends React.Component {
         this.checkIndexRangeOK(i);
         this.checkIndexRangeOK(j);
         const result = this.state.array[i] <= this.state.array[j];
-        console.log(`comparing #${i}:${this.state.array[i]} #${j}:${this.state.array[j]} result: ${result}`);
+        console.log(`comparing (#${i}, ${this.state.array[i]}) (#${j}, ${this.state.array[j]}) result: ${result}`);
 
         return result;
     });
