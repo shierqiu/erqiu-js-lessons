@@ -144,8 +144,8 @@ class SortLessonContainer extends React.Component {
     swap = this.delay((i, j) => {
         this.checkInterrupted();
 
-        this.checkIndexRangeOK(i);
-        this.checkIndexRangeOK(j);
+        this.checkIndexRangeOK(i, 'left of swap(left, right)');
+        this.checkIndexRangeOK(j, 'right of swap(left, right)');
         console.log(`swapping #${i} and #${j}`)
 
         this.setState(({array}) => {
@@ -163,8 +163,9 @@ class SortLessonContainer extends React.Component {
     lessThan = this.delay((i, j) => {
         this.checkInterrupted();
 
-        this.checkIndexRangeOK(i);
-        this.checkIndexRangeOK(j);
+        this.checkIndexRangeOK(i, 'left of lessThan(left, right)');
+        this.checkIndexRangeOK(j, 'right of lessThan(left, right)');
+
         const leftValue = this.state.array[i].value;
         const rightValue = this.state.array[j].value;
         const result = leftValue < rightValue;
