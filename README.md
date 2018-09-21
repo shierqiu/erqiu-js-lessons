@@ -12,12 +12,18 @@ This is personal lesson for programming beginner Erqiu.
 - A node version manager, nvm
   - Window https://github.com/coreybutler/nvm-windows/releases
     - Download latest nvm-setup.zip and install it
+    - Type the following to a terminal, `nvm install latest`
+    - Type the last command shown in terminal like `nvm use 10.xx.x`
+    - (WIP) MORE...
   - Linux/Mac https://github.com/creationix/nvm/blob/master/README.md#installation
 - A version control system, git https://git-scm.com/downloads
 - Recommended Code Editor, Visual Studio Code https://code.visualstudio.com/
 
 ## Commands Cheatsheet
 
+- get latest code from
+  - yuan's repo `git pull yuan master`
+  - your own repo `git pull origin HEAD`
 - start `npm start`
 - test `npm test [--watch]`
 - build `npm run build`
