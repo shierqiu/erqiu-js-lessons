@@ -5,6 +5,7 @@ This is personal lesson for programming beginner Erqiu.
 ## Table of Contents
 
 - [Needed Things](#needed-things)
+- [First Time Setup](#first-time-setup)
 - [Commands Cheatsheet](#commands-cheatsheet)
 
 ## Needed Things
@@ -18,6 +19,13 @@ This is personal lesson for programming beginner Erqiu.
   - Linux/Mac https://github.com/creationix/nvm/blob/master/README.md#installation
 - A version control system, git https://git-scm.com/downloads
 - Recommended Code Editor, Visual Studio Code https://code.visualstudio.com/
+
+## First Time Setup
+
+```js
+npm install
+npm start
+```
 
 ## Commands Cheatsheet
 
