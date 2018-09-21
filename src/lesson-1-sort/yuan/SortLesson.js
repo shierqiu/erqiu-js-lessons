@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'react-emotion';
+import erqiuBubbleSort from '../erqiu/bubbleSort';
 
 const ArrayItem = styled('div')(props => ({
     minWidth: 40,
@@ -31,16 +32,25 @@ async function bubbleSort(length, lessThanOrEqual, swap) {
     }
 }
 
-const StartButton = styled('button')({
-    marginTop: 10,
+const CommonButton = styled('button')({
+    display: 'inline-block',
+    margin: 10,
 });
 
-const SortLesson = ({ array, swap, lessThanOrEqual, algorithm }) => {
+const StartButton = CommonButton;
+const ToggleAlgorithmButton = CommonButton;
+
+const SortLesson = ({ array, swap, lessThanOrEqual, algorithm, toggleAlgorithmToUse }) => {
     return <div>
         <ArrayVisualization array={array}/>
+        <div>
         <StartButton onClick={() =>
             algorithm(array.length, lessThanOrEqual, swap)}
         >Start</StartButton>
+        <ToggleAlgorithmButton onClick={toggleAlgorithmToUse}>
+            Using {algorithm === bubbleSort ? "yuan's algorithm" : "erqiu's algorithm"}
+        </ToggleAlgorithmButton>
+        </div>
     </div>;
 };
 
@@ -48,6 +58,11 @@ class SortLessonContainer extends React.Component {
     state = {
         array: [1, 5, 3, 2, 4],
         delayMillis: 1000,
+        algorithmToUse: 'yuan',
+    };
+
+    toggleAlgorithmToUse = () => {
+        this.setState(({ algorithmToUse }) => ({ algorithmToUse: algorithmToUse === 'yuan' ? 'erqiu' : 'yuan' }));
     };
 
     delay = (fn) => {
@@ -98,7 +113,8 @@ class SortLessonContainer extends React.Component {
           array={this.state.array}
           swap={this.swap}
           lessThanOrEqual={this.lessThanOrEqual}
-          algorithm={bubbleSort}
+          algorithm={this.state.algorithmToUse === 'yuan' ? bubbleSort : erqiuBubbleSort}
+          toggleAlgorithmToUse={this.toggleAlgorithmToUse}
         />;
     }
 }
