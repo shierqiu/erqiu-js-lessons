@@ -1,6 +1,5 @@
-async function bubbleSort(array, isNoGreaterThan, swap) {
+async function bubbleSort(length, isNoGreaterThan, swap) {
     // write your code here
-    // array.length is length
 
     // for comparing
     // const compareResult = await isNoGreaterThan(i, j);
