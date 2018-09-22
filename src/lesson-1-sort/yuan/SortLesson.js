@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'react-emotion';
 import erqiuBubbleSort from '../erqiu/bubbleSort';
 
-const ArrayItem = styled('div')(props => ({
+const ArrayItem = styled('div')(({ beingSwapped, beingCompared }) => ({
     minWidth: 40,
     borderStyle: 'solid',
     borderWidth: 1,
@@ -10,13 +10,29 @@ const ArrayItem = styled('div')(props => ({
     margin: '0px -1px 10px 0px',
     display: 'inline-block',
     padding: 10,
+    backgroundColor: beingSwapped
+        ? 'lightgreen'
+        : (beingCompared ? 'yellow' : null),
 }));
 
-const ArrayVisualization = ({ array }) => {
+const ArrayVisualization = ({ array, onGoingAction, actionParams }) => {
+    const isComparing = onGoingAction === 'compare';
+    const isSwapping = onGoingAction === 'swap';
+
     return <div>
-        {array.map((item, index) =>
-            <ArrayItem key={item.index} isFirst={index === 0}>{item.value}</ArrayItem>
-        )}
+        {array.map((item, index) => {
+            const beingCompared = isComparing && actionParams.indexOf(item.index) >= 0;
+            const beingSwapped = isSwapping && actionParams.indexOf(item.index) >= 0;
+
+            return <ArrayItem
+                key={item.index}
+                isFirst={index === 0}
+                beingCompared={beingCompared}
+                beingSwapped={beingSwapped}
+            >
+                {item.value}
+            </ArrayItem>;
+        })}
     </div>
 }
 
@@ -57,11 +73,16 @@ const SortLesson = ({
      array, swap, lessThan,
      runAlgorithm, stopAlgorithm,
      algorithmToUse, toggleAlgorithmToUse,
-     status, error, shuffle 
+     status, error, shuffle,
+     onGoingAction, actionParams,
 }) => {
     return <div>
         <h4>Status: {status}</h4>
-        <ArrayVisualization array={array}/>
+        <ArrayVisualization
+            array={array}
+            onGoingAction={onGoingAction}
+            actionParams={actionParams}
+        />
         <div>
             { status !== 'running'
                 ? <StartButton onClick={() =>
@@ -109,14 +130,48 @@ class SortLessonContainer extends React.Component {
         algorithmToUse: 'erqiu',
         caughtError: null,
         status: 'initial',
+        onGoingAction: null,
+        actionParams: null,
+    };
+
+    setOnGoingAction = {
+        clear: () => {
+            this.setState({
+                onGoingAction: null,
+                actionParams: null,
+            });
+        },
+        swapping: (i, j) => {
+            this.setState({
+                onGoingAction: 'swap',
+                actionParams: [
+                    this.state.array[i].index,
+                    this.state.array[j].index
+                ],
+            });
+        },
+        comparing: (i, j) => {
+            this.setState({
+                onGoingAction: 'compare',
+                actionParams: [
+                    this.state.array[i].index,
+                    this.state.array[j].index,
+                ],
+            });
+        }
     };
 
     toggleAlgorithmToUse = () => {
+        this.stopAlgorithm();
         this.setState(({ algorithmToUse }) => ({ algorithmToUse: algorithmToUse === 'yuan' ? 'erqiu' : 'yuan' }));
     };
 
-    delay = (fn) => {
+    delay = (fn, immediateFn = null) => {
         return (...args) => {
+            if (immediateFn) {
+                immediateFn(...args);
+            }
+
             return new Promise((resolve, reject) => {
                 setTimeout(() => {
                     try {
@@ -124,7 +179,14 @@ class SortLessonContainer extends React.Component {
                     } catch (err) {
                         reject(err);
                     }
-                }, this.state.delayMillis);
+                }, this.state.delayMillis / 2);
+            }).then(result => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(
+                        () => resolve(result),
+                        this.state.delayMillis / 2
+                    );
+                });
             });
         }
     };
@@ -162,6 +224,8 @@ class SortLessonContainer extends React.Component {
                 array: newArray,
             };
         });
+    }, (i, j) => {
+        this.setOnGoingAction.swapping(i, j);
     });
 
     lessThan = this.delay((i, j) => {
@@ -176,9 +240,12 @@ class SortLessonContainer extends React.Component {
         console.log(`comparing (#${i}, ${leftValue}) (#${j}, ${rightValue}) result: ${result}`);
 
         return result;
+    }, (i, j) => {
+        this.setOnGoingAction.comparing(i, j);
     });
 
     shuffle = () => {
+        this.stopAlgorithm();
         this.setState({
             array: expandArray(randomArray()),
             status: 'initial',
@@ -195,11 +262,13 @@ class SortLessonContainer extends React.Component {
                 this.setState({
                     status: 'complete',
                 });
+                this.setOnGoingAction.clear();
             })
             .catch(err => {
                 if (err.interrupted) {
                     console.log('stopped');
                 } else {
+                    this.setOnGoingAction.clear();
                     this.setState({
                         caughtError: err,
                         status: 'error',
@@ -209,6 +278,7 @@ class SortLessonContainer extends React.Component {
     };
 
     stopAlgorithm = () => {
+        this.setOnGoingAction.clear();
         this.setState({
             status: 'initial',
         });
@@ -226,6 +296,8 @@ class SortLessonContainer extends React.Component {
           error={this.state.caughtError}
           shuffle={this.shuffle}
           stopAlgorithm={this.stopAlgorithm}
+          onGoingAction={this.state.onGoingAction}
+          actionParams={this.state.actionParams}
         />;
     }
 }
