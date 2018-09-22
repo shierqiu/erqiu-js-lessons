@@ -23,9 +23,8 @@ const ArrayVisualization = ({ array }) => {
 async function bubbleSort(length, lessThan, swap) {
     for (let i = 0; i < length - 1; ++i) {
         for (let j = 0; j < length - i - 1; ++j) {
-            const isLessThanOrEqual = await lessThan(j + 1, j);
-            console.log(length, i, j, isLessThanOrEqual);
-            if (!isLessThanOrEqual) {
+            const isInWrongOrder = await lessThan(j + 1, j);
+            if (isInWrongOrder) {
                 await swap(j, j + 1);
             }
         }
