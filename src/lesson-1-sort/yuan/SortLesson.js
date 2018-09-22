@@ -7,7 +7,7 @@ const ArrayItem = styled('div')(props => ({
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: 'black',
-    borderLeftStyle: props.isFirst ? 'solid' : 'none',
+    margin: '0px -1px 10px 0px',
     display: 'inline-block',
     padding: 10,
 }));
@@ -54,7 +54,12 @@ const ErrorUI = ({ hasError, error }) => {
     return <div><h3>Error Message: {error.message}</h3><WrappedPre>{error.stack}</WrappedPre></div>;
 }
 
-const SortLesson = ({ array, swap, lessThan, runAlgorithm, stopAlgorithm, algorithmToUse, toggleAlgorithmToUse, status, error, shuffle }) => {
+const SortLesson = ({
+     array, swap, lessThan,
+     runAlgorithm, stopAlgorithm,
+     algorithmToUse, toggleAlgorithmToUse,
+     status, error, shuffle 
+}) => {
     return <div>
         <h4>Status: {status}</h4>
         <ArrayVisualization array={array}/>
