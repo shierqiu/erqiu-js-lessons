@@ -72,12 +72,17 @@ const ErrorUI = ({ hasError, error }) => {
     return <div><h3>Error Message: {error.message}</h3><WrappedPre>{error.stack}</WrappedPre></div>;
 }
 
+const CheckBoxLabel = styled('label')({
+    fontSize: 11,
+});
+
 const SortLesson = ({
      array, swap, lessThan,
      runAlgorithm, stopAlgorithm,
      algorithmToUse, toggleAlgorithmToUse,
      status, error, shuffle,
      onGoingAction, actionParams,
+     toggleAllowDuplicateNumber, allowDuplicateNumber,
 }) => {
     return <div>
         <h4>Status: {status}</h4>
@@ -96,22 +101,67 @@ const SortLesson = ({
             <ToggleAlgorithmButton onClick={toggleAlgorithmToUse}>
                 Using {algorithmToUse === 'yuan' ? "yuan's algorithm" : "erqiu's algorithm"}
             </ToggleAlgorithmButton>
+            <ErrorUI hasError={status==='error'} error={error}/>
+        </div>
+        <div>
+            <CheckBoxLabel>
+                Allow Duplicate Number
+                <input
+                    type="checkbox"
+                    checked={allowDuplicateNumber}
+                    onChange={toggleAllowDuplicateNumber}
+                />
+            </CheckBoxLabel>
             <CommonButton onClick={shuffle}>
                 Randomize
             </CommonButton>
-            <ErrorUI hasError={status==='error'} error={error}/>
         </div>
     </div>;
 };
 
-function randomArray() {
-    const newArray = [];
-    const length = Math.ceil(Math.random() * 4) + 6;
-    for (let i = 0; i < length; ++i) {
-        newArray.push(Math.ceil(Math.random() * 10));
+// random integer in [l, r)
+function randomInt(l, r) {
+    const res = Math.floor(Math.random() * (r - l) + l);
+    if (res >= r) {
+        // fix possible float error
+        return r - 1;
+    } else {
+        return res;
     }
+}
 
-    return newArray;
+const randomArrayStrategies = {
+    allRandom: (length) => {
+        const newArray = [];
+        for (let i = 0; i < length; ++i) {
+            newArray.push(Math.ceil(Math.random() * 10));
+        }
+
+        return newArray;
+    },
+    permutation: (length) => {
+        const a = [];
+        for (let i = 0; i < length; ++i) {
+            a.push(i + 1);
+        }
+        for (let i = 0; i < length - 1; ++i) {
+            const j = randomInt(i, length);
+            const t = a[i];
+            a[i] = a[j];
+            a[j] = t;
+        }
+
+        return a;
+    },
+}
+
+function randomArray(allowDuplicateNumber = true) {
+    const length = Math.ceil(Math.random() * 4) + 6;
+    if (allowDuplicateNumber) {
+        return randomArrayStrategies.allRandom(length);
+    } else {
+        return randomArrayStrategies.permutation(length);
+    }
 }
 
 function expandArray(array) {
@@ -128,13 +178,14 @@ function expandArray(array) {
 
 class SortLessonContainer extends React.Component {
     state = {
-        array: expandArray(randomArray()),
+        array: expandArray(randomArray(false)),
         delayMillis: 1000,
         algorithmToUse: 'erqiu',
         caughtError: null,
         status: 'initial',
         onGoingAction: null,
         actionParams: null,
+        allowDuplicateNumber: true,
     };
 
     setOnGoingAction = {
@@ -167,6 +218,12 @@ class SortLessonContainer extends React.Component {
     toggleAlgorithmToUse = () => {
         this.stopAlgorithm();
         this.setState(({ algorithmToUse }) => ({ algorithmToUse: algorithmToUse === 'yuan' ? 'erqiu' : 'yuan' }));
+    };
+
+    toggleAllowDuplicateNumber = () => {
+        this.setState(({ allowDuplicateNumber }) => ({
+            allowDuplicateNumber: !allowDuplicateNumber,
+        }));
     };
 
     delay = (fn, immediateFn = null) => {
@@ -250,7 +307,7 @@ class SortLessonContainer extends React.Component {
     shuffle = () => {
         this.stopAlgorithm();
         this.setState({
-            array: expandArray(randomArray()),
+            array: expandArray(randomArray(this.state.allowDuplicateNumber)),
             status: 'initial',
         });
     };
@@ -301,6 +358,8 @@ class SortLessonContainer extends React.Component {
           stopAlgorithm={this.stopAlgorithm}
           onGoingAction={this.state.onGoingAction}
           actionParams={this.state.actionParams}
+          toggleAllowDuplicateNumber={this.toggleAllowDuplicateNumber}
+          allowDuplicateNumber={this.state.allowDuplicateNumber}
         />;
     }
 }
