@@ -18,14 +18,14 @@ async function bubbleSort(length, isLessThan, swap) {
     //     await swap(1, 2)
     // }
 
-    for (let i = 0; i < length ; i = i + 1) {
-        for (let i = 0; i < length - 1 ; i = i + 1) {
+    let i, j;
+    for (j = 0; j < length ; j = j + 1) {
+        for (i = 0; i < length - 1 - j; i = i + 1) {
             if (await isLessThan(i + 1, i)) {
                 await swap(i, i + 1)
             }
         }
     }
-
 
     // const compareResult = await isLessThan(1, 3)
     // console.log(compareResult)
