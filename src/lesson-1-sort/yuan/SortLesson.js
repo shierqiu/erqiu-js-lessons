@@ -2,33 +2,51 @@ import React from 'react';
 import styled from 'react-emotion';
 import erqiuBubbleSort from '../erqiu/bubbleSort';
 
-const ArrayItem = styled('div')(props => ({
+const ArrayItem = styled('div')(({ beingSwapped, beingCompared }) => ({
     minWidth: 40,
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: 'black',
-    borderLeftStyle: props.isFirst ? 'solid' : 'none',
+    margin: '0px -1px 10px 0px',
     display: 'inline-block',
     padding: 10,
+    backgroundColor: beingSwapped
+        ? 'lightgreen'
+        : (beingCompared ? 'yellow' : null),
 }));
 
-const ArrayVisualization = ({ array }) => {
+const ArrayVisualization = ({ array, onGoingAction, actionParams }) => {
+    const isComparing = onGoingAction === 'compare';
+    const isSwapping = onGoingAction === 'swap';
+
     return <div>
-        {array.map((item, index) =>
-            <ArrayItem key={item.index} isFirst={index === 0}>{item.value}</ArrayItem>
-        )}
+        {array.map((item, index) => {
+            const beingCompared = isComparing && actionParams.indexOf(item.index) >= 0;
+            const beingSwapped = isSwapping && actionParams.indexOf(item.index) >= 0;
+
+            return <ArrayItem
+                key={item.index}
+                isFirst={index === 0}
+                beingCompared={beingCompared}
+                beingSwapped={beingSwapped}
+            >
+                {item.value}
+            </ArrayItem>;
+        })}
     </div>
 }
 
-async function bubbleSort(length, lessThan, swap) {
-    for (let i = 0; i < length - 1; ++i) {
-        for (let j = 0; j < length - i - 1; ++j) {
-            const isLessThanOrEqual = await lessThan(j + 1, j);
-            console.log(length, i, j, isLessThanOrEqual);
-            if (!isLessThanOrEqual) {
+async function yuanBubbleSort(length, lessThan, swap) {
+    for (let lengthToSort = length; lengthToSort > 1;) {
+        let lastSwapIndex = null;
+        for (let j = 0; j < lengthToSort - 1; ++j) {
+            const isInWrongOrder = await lessThan(j + 1, j);
+            if (isInWrongOrder) {
+                lastSwapIndex = j;
                 await swap(j, j + 1);
             }
         }
+        lengthToSort = lastSwapIndex + 1;
     }
 }
 
@@ -54,10 +72,25 @@ const ErrorUI = ({ hasError, error }) => {
     return <div><h3>Error Message: {error.message}</h3><WrappedPre>{error.stack}</WrappedPre></div>;
 }
 
-const SortLesson = ({ array, swap, lessThan, runAlgorithm, stopAlgorithm, algorithmToUse, toggleAlgorithmToUse, status, error, shuffle }) => {
+const CheckBoxLabel = styled('label')({
+    fontSize: 11,
+});
+
+const SortLesson = ({
+     array, swap, lessThan,
+     runAlgorithm, stopAlgorithm,
+     algorithmToUse, toggleAlgorithmToUse,
+     status, error, shuffle,
+     onGoingAction, actionParams,
+     toggleAllowDuplicateNumber, allowDuplicateNumber,
+}) => {
     return <div>
         <h4>Status: {status}</h4>
-        <ArrayVisualization array={array}/>
+        <ArrayVisualization
+            array={array}
+            onGoingAction={onGoingAction}
+            actionParams={actionParams}
+        />
         <div>
             { status !== 'running'
                 ? <StartButton onClick={() =>
@@ -68,22 +101,67 @@ const SortLesson = ({ array, swap, lessThan, runAlgorithm, stopAlgorithm, algori
             <ToggleAlgorithmButton onClick={toggleAlgorithmToUse}>
                 Using {algorithmToUse === 'yuan' ? "yuan's algorithm" : "erqiu's algorithm"}
             </ToggleAlgorithmButton>
+            <ErrorUI hasError={status==='error'} error={error}/>
+        </div>
+        <div>
+            <CheckBoxLabel>
+                Allow Duplicate Number
+                <input
+                    type="checkbox"
+                    checked={allowDuplicateNumber}
+                    onChange={toggleAllowDuplicateNumber}
+                />
+            </CheckBoxLabel>
             <CommonButton onClick={shuffle}>
                 Randomize
             </CommonButton>
-            <ErrorUI hasError={status==='error'} error={error}/>
         </div>
     </div>;
 };
 
-function randomArray() {
-    const newArray = [];
-    const length = Math.ceil(Math.random() * 4) + 6;
-    for (let i = 0; i < length; ++i) {
-        newArray.push(Math.ceil(Math.random() * 10));
+// random integer in [l, r)
+function randomInt(l, r) {
+    const res = Math.floor(Math.random() * (r - l) + l);
+    if (res >= r) {
+        // fix possible float error
+        return r - 1;
+    } else {
+        return res;
     }
+}
 
-    return newArray;
+const randomArrayStrategies = {
+    allRandom: (length) => {
+        const newArray = [];
+        for (let i = 0; i < length; ++i) {
+            newArray.push(Math.ceil(Math.random() * 10));
+        }
+
+        return newArray;
+    },
+    permutation: (length) => {
+        const a = [];
+        for (let i = 0; i < length; ++i) {
+            a.push(i + 1);
+        }
+        for (let i = 0; i < length - 1; ++i) {
+            const j = randomInt(i, length);
+            const t = a[i];
+            a[i] = a[j];
+            a[j] = t;
+        }
+
+        return a;
+    },
+}
+
+function randomArray(allowDuplicateNumber = true) {
+    const length = Math.ceil(Math.random() * 4) + 6;
+    if (allowDuplicateNumber) {
+        return randomArrayStrategies.allRandom(length);
+    } else {
+        return randomArrayStrategies.permutation(length);
+    }
 }
 
 function expandArray(array) {
@@ -100,19 +178,60 @@ function expandArray(array) {
 
 class SortLessonContainer extends React.Component {
     state = {
-        array: expandArray(randomArray()),
+        array: expandArray(randomArray(false)),
         delayMillis: 1000,
         algorithmToUse: 'erqiu',
         caughtError: null,
         status: 'initial',
+        onGoingAction: null,
+        actionParams: null,
+        allowDuplicateNumber: true,
+    };
+
+    setOnGoingAction = {
+        clear: () => {
+            this.setState({
+                onGoingAction: null,
+                actionParams: null,
+            });
+        },
+        swapping: (i, j) => {
+            this.setState({
+                onGoingAction: 'swap',
+                actionParams: [
+                    this.state.array[i].index,
+                    this.state.array[j].index
+                ],
+            });
+        },
+        comparing: (i, j) => {
+            this.setState({
+                onGoingAction: 'compare',
+                actionParams: [
+                    this.state.array[i].index,
+                    this.state.array[j].index,
+                ],
+            });
+        }
     };
 
     toggleAlgorithmToUse = () => {
+        this.stopAlgorithm();
         this.setState(({ algorithmToUse }) => ({ algorithmToUse: algorithmToUse === 'yuan' ? 'erqiu' : 'yuan' }));
     };
 
-    delay = (fn) => {
+    toggleAllowDuplicateNumber = () => {
+        this.setState(({ allowDuplicateNumber }) => ({
+            allowDuplicateNumber: !allowDuplicateNumber,
+        }));
+    };
+
+    delay = (fn, immediateFn = null) => {
         return (...args) => {
+            if (immediateFn) {
+                immediateFn(...args);
+            }
+
             return new Promise((resolve, reject) => {
                 setTimeout(() => {
                     try {
@@ -120,7 +239,14 @@ class SortLessonContainer extends React.Component {
                     } catch (err) {
                         reject(err);
                     }
-                }, this.state.delayMillis);
+                }, this.state.delayMillis / 2);
+            }).then(result => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(
+                        () => resolve(result),
+                        this.state.delayMillis / 2
+                    );
+                });
             });
         }
     };
@@ -158,6 +284,8 @@ class SortLessonContainer extends React.Component {
                 array: newArray,
             };
         });
+    }, (i, j) => {
+        this.setOnGoingAction.swapping(i, j);
     });
 
     lessThan = this.delay((i, j) => {
@@ -172,17 +300,20 @@ class SortLessonContainer extends React.Component {
         console.log(`comparing (#${i}, ${leftValue}) (#${j}, ${rightValue}) result: ${result}`);
 
         return result;
+    }, (i, j) => {
+        this.setOnGoingAction.comparing(i, j);
     });
 
     shuffle = () => {
+        this.stopAlgorithm();
         this.setState({
-            array: expandArray(randomArray()),
+            array: expandArray(randomArray(this.state.allowDuplicateNumber)),
             status: 'initial',
         });
     };
 
     runAlgorithm = (...args) => {
-        const algorithmToUse = this.state.algorithmToUse === 'yuan' ? bubbleSort : erqiuBubbleSort;
+        const algorithmToUse = this.state.algorithmToUse === 'yuan' ? yuanBubbleSort : erqiuBubbleSort;
         this.setState({
             status: 'running',
         });
@@ -191,11 +322,13 @@ class SortLessonContainer extends React.Component {
                 this.setState({
                     status: 'complete',
                 });
+                this.setOnGoingAction.clear();
             })
             .catch(err => {
                 if (err.interrupted) {
                     console.log('stopped');
                 } else {
+                    this.setOnGoingAction.clear();
                     this.setState({
                         caughtError: err,
                         status: 'error',
@@ -205,6 +338,7 @@ class SortLessonContainer extends React.Component {
     };
 
     stopAlgorithm = () => {
+        this.setOnGoingAction.clear();
         this.setState({
             status: 'initial',
         });
@@ -222,6 +356,10 @@ class SortLessonContainer extends React.Component {
           error={this.state.caughtError}
           shuffle={this.shuffle}
           stopAlgorithm={this.stopAlgorithm}
+          onGoingAction={this.state.onGoingAction}
+          actionParams={this.state.actionParams}
+          toggleAllowDuplicateNumber={this.toggleAllowDuplicateNumber}
+          allowDuplicateNumber={this.state.allowDuplicateNumber}
         />;
     }
 }
